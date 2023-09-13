@@ -1,0 +1,4 @@
+port: ":5005"
+dbhost: "localhost"
+dbport: ":9876"
+database: "gojwt"
