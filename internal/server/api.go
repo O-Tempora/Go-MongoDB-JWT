@@ -1,8 +1,11 @@
 package server
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"gomongojwt/internal/middleware"
+	"gomongojwt/internal/repository"
 	"io"
 	"net/http"
 	"os"
@@ -17,6 +20,7 @@ type server struct {
 	client   *mongo.Client
 	database *mongo.Database
 	router   *mux.Router
+	store    *repository.Store
 }
 
 func initServer() *server {
@@ -39,6 +43,31 @@ func initLogger(wr io.Writer) *slog.Logger {
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.router.ServeHTTP(w, r)
 }
+func (s *server) respond(w http.ResponseWriter, r *http.Request, code int, data interface{}, err error) {
+	w.WriteHeader(code)
+	if err != nil {
+		response := map[string]string{"error": err.Error()}
+		json.NewEncoder(w).Encode(response)
+		s.logger.LogAttrs(context.Background(), slog.LevelError, "Response:",
+			slog.String("URL", r.URL.Path),
+			slog.String("Method", r.Method),
+			slog.Int("HTTP Code", code),
+			slog.String("HTTP Status", http.StatusText(code)),
+			slog.String("Error", err.Error()),
+		)
+		return
+	}
+
+	if data != nil {
+		json.NewEncoder(w).Encode(data)
+	}
+	s.logger.LogAttrs(context.Background(), slog.LevelInfo, "Response:",
+		slog.String("URL", r.URL.Path),
+		slog.String("Method", r.Method),
+		slog.Int("HTTP Code", code),
+		slog.String("HTTP Status", http.StatusText(code)),
+	)
+}
 
 func (s *server) initRouter() {
 	s.router.Use(middleware.LogRequest(s.logger))
@@ -47,7 +76,16 @@ func (s *server) initRouter() {
 }
 
 func (s *server) handleAuth(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Auth, %s", r.Host)
+	guid := r.URL.Query().Get("guid")
+	exists, err := s.store.User().IsPresent(guid)
+	if err != nil {
+		s.respond(w, r, http.StatusInternalServerError, nil, err)
+	}
+	if exists {
+		s.respond(w, r, http.StatusFound, exists, nil)
+	} else {
+		s.respond(w, r, http.StatusNotFound, exists, nil)
+	}
 }
 func (s *server) handleRefresh(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Refresh, %s", r.Host)

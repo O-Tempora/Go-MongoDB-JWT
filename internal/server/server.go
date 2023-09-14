@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"gomongojwt/internal/models"
+	"gomongojwt/internal/repository"
 	"net/http"
 	"time"
 
@@ -62,6 +63,7 @@ func StartServer(config *Config) error {
 		return err
 	}
 	seedUsers(server.database, config.Collection)
+	server.store = repository.CreateStore(server.database)
 
 	server.logger.LogAttrs(ctx, slog.LevelInfo,
 		"Server started",
