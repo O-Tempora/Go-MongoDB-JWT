@@ -20,6 +20,7 @@ killdb: stopdb
 .PHONY: run
 run: build rundb
 	./server
+#	@./server -config=$(c) -resetKeys=$(r)
 
 .PHONY: reset
 reset: killdb run
@@ -30,4 +31,4 @@ git:
 	git commit -m "$m"
 	git push
 
-.DEFAULT_GOAL := build
+.DEFAULT_GOAL := 

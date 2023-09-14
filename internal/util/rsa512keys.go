@@ -13,7 +13,7 @@ import (
 const (
 	BitSize          = 4096
 	Public_Key_File  = "internal/util/keys/public.pub"
-	Private_Key_File = "internal/util/keys/private"
+	Private_Key_File = "internal/util/keys/private.pub"
 )
 
 func generatePrivateKey(size int) (*rsa.PrivateKey, error) {

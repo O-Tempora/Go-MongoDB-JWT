@@ -8,11 +8,12 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type UserRepository interface {
 	IsPresent(guid string) (bool, error)
-	UpdateRefresh(guid primitive.ObjectID, refresh string) error
+	UpdateRefresh(guid string, refresh string) error
 }
 
 type UserRep struct {
@@ -35,9 +36,17 @@ func (r *UserRep) IsPresent(guid string) (bool, error) {
 	}
 	return true, nil
 }
-func (r *UserRep) UpdateRefresh(guid primitive.ObjectID, refresh string) error {
+func (r *UserRep) UpdateRefresh(guid string, refresh string) error {
+	id, err := primitive.ObjectIDFromHex(guid)
+	if err != nil {
+		return err
+	}
+	hashToken, err := bcrypt.GenerateFromPassword([]byte(refresh), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	_, err := r.collection.UpdateByID(ctx, guid, bson.D{{Key: "$set", Value: bson.D{{Key: "refreshtoken", Value: refresh}}}}, options.Update().SetUpsert(true))
+	_, err = r.collection.UpdateByID(ctx, id, bson.D{{Key: "$set", Value: bson.D{{Key: "refreshtoken", Value: string(hashToken)}}}}, options.Update().SetUpsert(true))
 	return err
 }

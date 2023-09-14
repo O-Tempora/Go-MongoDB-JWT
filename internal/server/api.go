@@ -12,7 +12,6 @@ import (
 	"os"
 
 	"github.com/gorilla/mux"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/exp/slog"
 )
@@ -38,7 +37,7 @@ func initServer() *server {
 func initLogger(wr io.Writer) *slog.Logger {
 	logger := slog.New(slog.NewJSONHandler(wr, &slog.HandlerOptions{
 		Level:     slog.LevelInfo,
-		AddSource: true,
+		AddSource: false,
 	}))
 	return logger
 }
@@ -80,12 +79,8 @@ func (s *server) initRouter() {
 func (s *server) handleAuth(w http.ResponseWriter, r *http.Request) {
 	guid := r.URL.Query().Get("guid")
 	exists, err := s.store.User().IsPresent(guid)
-	if err != nil {
-		s.respond(w, r, http.StatusInternalServerError, nil, err)
-		return
-	}
-	if !exists {
-		s.respond(w, r, http.StatusBadRequest, exists, nil)
+	if err != nil || !exists {
+		s.respond(w, r, http.StatusBadRequest, "no such user", err)
 		return
 	}
 	access, refresh, err := util.GetTokenPair(guid)
@@ -93,10 +88,9 @@ func (s *server) handleAuth(w http.ResponseWriter, r *http.Request) {
 		s.respond(w, r, http.StatusUnauthorized, nil, err)
 		return
 	}
-	id, _ := primitive.ObjectIDFromHex(guid)
-	err = s.store.User().UpdateRefresh(id, refresh)
+	err = s.store.User().UpdateRefresh(guid, refresh)
 	if err != nil {
-		s.respond(w, r, http.StatusConflict, nil, err)
+		s.respond(w, r, http.StatusUnauthorized, nil, err)
 		return
 	}
 	s.respond(w, r, http.StatusOK, map[string]string{

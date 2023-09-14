@@ -13,12 +13,12 @@ import (
 
 var (
 	configPath string
-	resetKeys  bool
+	resetKeys  string
 )
 
 func init() {
 	flag.StringVar(&configPath, "config", "configs/default.yaml", "server and db configuration")
-	flag.BoolVar(&resetKeys, "resetKeys", true, "reset rs512 keys or not")
+	flag.StringVar(&resetKeys, "resetKeys", "y", "reset rs512 keys or not")
 }
 
 func main() {
@@ -35,7 +35,7 @@ func main() {
 	if err = yaml.Unmarshal(data, config); err != nil {
 		log.Fatal("Failed to parse config")
 	}
-	if resetKeys {
+	if resetKeys == "Y" || resetKeys == "y" {
 		util.SeedRS512Keys()
 	}
 	if err = server.StartServer(config); err != nil {
