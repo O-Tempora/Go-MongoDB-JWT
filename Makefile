@@ -9,7 +9,7 @@ build:
 rundb:
 	sudo docker run --name $(DB_CONTAINER_NAME) -d -p 9876:27017 mongodb/mongodb-community-server:latest
 
-.PHONY: stodb
+.PHONY: stopdb
 stopdb:
 	sudo docker stop $(DB_CONTAINER_NAME)
 

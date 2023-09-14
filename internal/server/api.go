@@ -1,6 +1,8 @@
 package server
 
 import (
+	"fmt"
+	"gomongojwt/internal/middleware"
 	"io"
 	"net/http"
 	"os"
@@ -19,8 +21,8 @@ type server struct {
 
 func initServer() *server {
 	s := &server{
-		client:   nil, //temp
-		database: nil, //temp
+		client:   nil,
+		database: nil,
 		logger:   initLogger(os.Stdout),
 		router:   mux.NewRouter(),
 	}
@@ -30,13 +32,23 @@ func initServer() *server {
 func initLogger(wr io.Writer) *slog.Logger {
 	logger := slog.New(slog.NewJSONHandler(wr, &slog.HandlerOptions{
 		Level:     slog.LevelInfo,
-		AddSource: true,
+		AddSource: false,
 	}))
 	return logger
 }
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.router.ServeHTTP(w, r)
 }
-func (s *server) initRouter() {
 
+func (s *server) initRouter() {
+	s.router.Use(middleware.LogRequest(s.logger))
+	s.router.HandleFunc("/auth", s.handleAuth).Methods("POST")
+	s.router.HandleFunc("/refresh", s.handleRefresh).Methods("POST")
+}
+
+func (s *server) handleAuth(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "Auth, %s", r.Host)
+}
+func (s *server) handleRefresh(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "Refresh, %s", r.Host)
 }
