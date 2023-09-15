@@ -93,15 +93,11 @@ func (s *server) handleAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.respond(w, r, http.StatusOK, map[string]string{
-		"Access":  access,
-		"Refresh": refresh,
+		"access":  access,
+		"refresh": refresh,
 	}, nil)
 }
 func (s *server) handleRefresh(w http.ResponseWriter, r *http.Request) {
-	//Get access + refresh
-	//Hash refresh and compare it with refresh in db
-	//If true -> create and send new token pair
-	//If false -> error
 	body := struct {
 		Access  string `json:"access"`
 		Refresh string `json:"refresh"`
@@ -116,5 +112,22 @@ func (s *server) handleRefresh(w http.ResponseWriter, r *http.Request) {
 		s.respond(w, r, http.StatusUnauthorized, nil, err)
 		return
 	}
-	s.respond(w, r, http.StatusOK, guid, err)
+	same, err := s.store.User().CompareRefreshAndHash(body.Refresh, guid.User)
+	if err != nil || !same {
+		s.respond(w, r, http.StatusForbidden, nil, err)
+		return
+	}
+	body.Access, body.Refresh, err = util.GetTokenPair(guid.User)
+	if err != nil {
+		s.respond(w, r, http.StatusInternalServerError, nil, err)
+		return
+	}
+	if err := s.store.User().UpdateRefresh(guid.User, body.Refresh); err != nil {
+		s.respond(w, r, http.StatusInternalServerError, nil, err)
+		return
+	}
+	s.respond(w, r, http.StatusOK, map[string]string{
+		"access":  body.Access,
+		"refresh": body.Refresh,
+	}, nil)
 }

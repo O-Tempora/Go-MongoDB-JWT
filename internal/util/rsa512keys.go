@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"io"
 	"os"
 
 	"golang.org/x/crypto/ssh"
@@ -63,15 +64,33 @@ func SeedRS512Keys() error {
 	return nil
 }
 func GetKeyPair() (*rsa.PublicKey, *rsa.PrivateKey, error) {
-	publicBytes, err := os.ReadFile(Public_Key_File)
+	// publicBytes, err := os.ReadFile(Public_Key_File)
+	// if err != nil {
+	// 	return nil, nil, err
+	// }
+	pubFile, err := os.OpenFile(Public_Key_File, os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
 		return nil, nil, err
 	}
-	privateBytes, err := os.ReadFile(Private_Key_File)
+	pubBytes, err := io.ReadAll(pubFile)
 	if err != nil {
 		return nil, nil, err
 	}
-	res, _, _, _, err := ssh.ParseAuthorizedKey(publicBytes)
+
+	// privateBytes, err := os.ReadFile(Private_Key_File)
+	// if err != nil {
+	// 	return nil, nil, err
+	// }
+	privFile, err := os.OpenFile(Private_Key_File, os.O_RDONLY|os.O_CREATE, 0666)
+	if err != nil {
+		return nil, nil, err
+	}
+	privBytes, err := io.ReadAll(privFile)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	res, _, _, _, err := ssh.ParseAuthorizedKey(pubBytes)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -79,7 +98,7 @@ func GetKeyPair() (*rsa.PublicKey, *rsa.PrivateKey, error) {
 	pubCrypto := parsedCryptoKey.CryptoPublicKey()
 	pub := pubCrypto.(*rsa.PublicKey)
 
-	block, _ := pem.Decode(privateBytes)
+	block, _ := pem.Decode(privBytes)
 	priv, _ := x509.ParsePKCS1PrivateKey(block.Bytes)
 
 	return pub, priv, nil
