@@ -38,8 +38,12 @@ func GenerateJWT(guid string) (string, error) {
 }
 
 func ValidateJWT(token string) (*JWTpayload, error) {
+	pub, _, err := GetKeyPair()
+	if err != nil {
+		return nil, err
+	}
 	t, err := jwt.ParseWithClaims(token, &JWTpayload{}, func(t *jwt.Token) (interface{}, error) {
-		return "", nil
+		return pub, nil
 	})
 	if err != nil {
 		return nil, err
@@ -68,4 +72,12 @@ func GetTokenPair(guid string) (access string, refresh string, err error) {
 	}
 	refresh, err = GenerateRefresh()
 	return access, refresh, err
+}
+
+func GetGUIDFromToken(accessToken string) (string, error) {
+	token, err := ValidateJWT(accessToken)
+	if err != nil {
+		return "", err
+	}
+	return token.User, nil
 }

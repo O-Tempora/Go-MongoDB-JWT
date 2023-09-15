@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"gomongojwt/internal/middleware"
 	"gomongojwt/internal/repository"
 	"gomongojwt/internal/util"
@@ -99,5 +98,23 @@ func (s *server) handleAuth(w http.ResponseWriter, r *http.Request) {
 	}, nil)
 }
 func (s *server) handleRefresh(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Refresh, %s", r.Host)
+	//Get access + refresh
+	//Hash refresh and compare it with refresh in db
+	//If true -> create and send new token pair
+	//If false -> error
+	body := struct {
+		Access  string `json:"access"`
+		Refresh string `json:"refresh"`
+	}{}
+	err := json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		s.respond(w, r, http.StatusBadRequest, nil, err)
+		return
+	}
+	guid, err := util.ValidateJWT(body.Access)
+	if err != nil {
+		s.respond(w, r, http.StatusUnauthorized, nil, err)
+		return
+	}
+	s.respond(w, r, http.StatusOK, guid, err)
 }
