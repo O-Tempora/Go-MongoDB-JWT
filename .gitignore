@@ -1,4 +1,2 @@
 /server
 *.pub
-/internal/util/keys/public.pub
-/internal/util/keys/private.pub
