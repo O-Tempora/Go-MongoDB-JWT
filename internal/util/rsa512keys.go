@@ -71,10 +71,6 @@ func SeedRS512Keys() error {
 	return nil
 }
 func GetKeyPair() (*rsa.PublicKey, *rsa.PrivateKey, error) {
-	// publicBytes, err := os.ReadFile(PublicKeyFile)
-	// if err != nil {
-	// 	return nil, nil, err
-	// }
 	pubFile, err := os.OpenFile(PublicKeyFile, os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
 		return nil, nil, err
@@ -84,10 +80,6 @@ func GetKeyPair() (*rsa.PublicKey, *rsa.PrivateKey, error) {
 		return nil, nil, err
 	}
 
-	// privateBytes, err := os.ReadFile(PrivateKeyFile)
-	// if err != nil {
-	// 	return nil, nil, err
-	// }
 	privFile, err := os.OpenFile(PrivateKeyFile, os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
 		return nil, nil, err

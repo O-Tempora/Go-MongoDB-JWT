@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"gomongojwt/internal/models"
 	"gomongojwt/internal/repository"
+	"gomongojwt/internal/service"
 	"net/http"
 	"time"
 
@@ -30,13 +31,6 @@ func connectDB(ctx context.Context, config *Config) (*mongo.Client, error) {
 	return client, nil
 }
 
-func GetDatabase(client *mongo.Client, name string) *mongo.Database {
-	return client.Database(name, nil)
-}
-func GetCollection(client *mongo.Database, name string) *mongo.Collection {
-	return client.Collection(name, nil)
-}
-
 func seedUsers(db *mongo.Database, collectionName string) {
 	db.Collection(collectionName).InsertMany(context.Background(), []interface{}{
 		models.User{GUID: primitive.NewObjectIDFromTimestamp(time.Now()), Name: "Bonnie"},
@@ -58,12 +52,14 @@ func StartServer(config *Config) error {
 
 	server := initServer()
 	server.client = client
-	server.database = server.client.Database(config.Database, nil)
-	if err := server.database.Collection(config.Collection).Drop(ctx); err != nil {
+
+	db := server.client.Database(config.Database, nil)
+	if err := db.Collection(config.Collection).Drop(ctx); err != nil {
 		return err
 	}
-	seedUsers(server.database, config.Collection)
-	server.store = repository.CreateStore(server.database)
+	store := repository.CreateStore(db)
+	server.service = service.InitService(store, db)
+	seedUsers(db, config.Collection)
 
 	server.logger.LogAttrs(ctx, slog.LevelInfo,
 		"Server started",

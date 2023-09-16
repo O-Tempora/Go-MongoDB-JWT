@@ -13,7 +13,6 @@ import (
 )
 
 type UserRepository interface {
-	IsPresent(guid string) (bool, error)
 	UpdateRefresh(guid string, refresh string) error
 	CompareRefreshAndHash(refresh, guid string) (bool, error)
 }
@@ -23,21 +22,6 @@ type UserRep struct {
 	collection *mongo.Collection
 }
 
-func (r *UserRep) IsPresent(guid string) (bool, error) {
-	id, err := primitive.ObjectIDFromHex(guid)
-	if err != nil {
-		return false, err
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	count, err := r.collection.CountDocuments(ctx, bson.D{{Key: "_id", Value: /*fmt.Sprintf("ObjectId(%s)", guid)*/ id}}, nil)
-	if err != nil {
-		return false, err
-	} else if count == 0 {
-		return false, nil
-	}
-	return true, nil
-}
 func (r *UserRep) UpdateRefresh(guid string, refresh string) error {
 	id, err := primitive.ObjectIDFromHex(guid)
 	if err != nil {
@@ -49,8 +33,13 @@ func (r *UserRep) UpdateRefresh(guid string, refresh string) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	_, err = r.collection.UpdateByID(ctx, id, bson.D{{Key: "$set", Value: bson.D{{Key: "refreshtoken", Value: string(hashToken)}}}}, options.Update().SetUpsert(true))
-	return err
+	res, err := r.collection.UpdateByID(ctx, id, bson.D{{Key: "$set", Value: bson.D{{Key: "refreshtoken", Value: string(hashToken)}}}}, options.Update().SetUpsert(true))
+	if err != nil {
+		return err
+	} else if res.MatchedCount == 0 {
+		return mongo.ErrNoDocuments
+	}
+	return nil
 }
 func (r *UserRep) CompareRefreshAndHash(refresh, guid string) (bool, error) {
 	id, err := primitive.ObjectIDFromHex(guid)

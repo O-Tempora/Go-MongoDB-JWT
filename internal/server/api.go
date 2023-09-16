@@ -4,8 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"gomongojwt/internal/middleware"
-	"gomongojwt/internal/repository"
-	"gomongojwt/internal/util"
+	"gomongojwt/internal/service"
 	"io"
 	"net/http"
 	"os"
@@ -16,19 +15,18 @@ import (
 )
 
 type server struct {
-	logger   *slog.Logger
-	client   *mongo.Client
-	database *mongo.Database
-	router   *mux.Router
-	store    *repository.Store
+	logger  *slog.Logger
+	client  *mongo.Client
+	router  *mux.Router
+	service service.Service
 }
 
 func initServer() *server {
 	s := &server{
-		client:   nil,
-		database: nil,
-		logger:   initLogger(os.Stdout),
-		router:   mux.NewRouter(),
+		client:  nil,
+		service: nil,
+		logger:  initLogger(os.Stdout),
+		router:  mux.NewRouter(),
 	}
 	s.initRouter()
 	return s
@@ -77,19 +75,9 @@ func (s *server) initRouter() {
 
 func (s *server) handleAuth(w http.ResponseWriter, r *http.Request) {
 	guid := r.URL.Query().Get("guid")
-	exists, err := s.store.User().IsPresent(guid)
-	if err != nil || !exists {
-		s.respond(w, r, http.StatusBadRequest, "no such user", err)
-		return
-	}
-	access, refresh, err := util.GetTokenPair(guid)
+	access, refresh, err := s.service.AuthorizeUser(guid)
 	if err != nil {
-		s.respond(w, r, http.StatusUnauthorized, nil, err)
-		return
-	}
-	err = s.store.User().UpdateRefresh(guid, refresh)
-	if err != nil {
-		s.respond(w, r, http.StatusUnauthorized, nil, err)
+		s.respond(w, r, http.StatusForbidden, nil, err)
 		return
 	}
 	s.respond(w, r, http.StatusOK, map[string]string{
@@ -107,27 +95,13 @@ func (s *server) handleRefresh(w http.ResponseWriter, r *http.Request) {
 		s.respond(w, r, http.StatusBadRequest, nil, err)
 		return
 	}
-	guid, err := util.ValidateJWT(body.Access)
+	newAccess, newRefresh, err := s.service.RefreshTokens(body.Access, body.Refresh)
 	if err != nil {
 		s.respond(w, r, http.StatusUnauthorized, nil, err)
 		return
 	}
-	same, err := s.store.User().CompareRefreshAndHash(body.Refresh, guid.User)
-	if err != nil || !same {
-		s.respond(w, r, http.StatusForbidden, nil, err)
-		return
-	}
-	body.Access, body.Refresh, err = util.GetTokenPair(guid.User)
-	if err != nil {
-		s.respond(w, r, http.StatusInternalServerError, nil, err)
-		return
-	}
-	if err := s.store.User().UpdateRefresh(guid.User, body.Refresh); err != nil {
-		s.respond(w, r, http.StatusInternalServerError, nil, err)
-		return
-	}
 	s.respond(w, r, http.StatusOK, map[string]string{
-		"access":  body.Access,
-		"refresh": body.Refresh,
+		"access":  newAccess,
+		"refresh": newRefresh,
 	}, nil)
 }
