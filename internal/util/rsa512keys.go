@@ -12,9 +12,10 @@ import (
 )
 
 const (
-	BitSize          = 4096
-	Public_Key_File  = "internal/util/keys/public.pub"
-	Private_Key_File = "internal/util/keys/private.pub"
+	BitSize        = 4096
+	KeyPath        = "internal/util/keys"
+	PublicKeyFile  = KeyPath + "/public.pub"
+	PrivateKeyFile = KeyPath + "/private.pub"
 )
 
 func generatePrivateKey(size int) (*rsa.PrivateKey, error) {
@@ -55,20 +56,26 @@ func SeedRS512Keys() error {
 		return err
 	}
 	privateKeyBytes := encodePrivateKeyToPEM(privateKey)
-	if err := os.WriteFile(Public_Key_File, publicKeyBytes, 0600); err != nil {
+
+	if _, err := os.Stat(KeyPath); os.IsNotExist(err) {
+		if err = os.Mkdir(KeyPath, os.ModePerm); err != nil {
+			return err
+		}
+	}
+	if err := os.WriteFile(PublicKeyFile, publicKeyBytes, 0666); err != nil {
 		return err
 	}
-	if err := os.WriteFile(Private_Key_File, privateKeyBytes, 0600); err != nil {
+	if err := os.WriteFile(PrivateKeyFile, privateKeyBytes, 0666); err != nil {
 		return err
 	}
 	return nil
 }
 func GetKeyPair() (*rsa.PublicKey, *rsa.PrivateKey, error) {
-	// publicBytes, err := os.ReadFile(Public_Key_File)
+	// publicBytes, err := os.ReadFile(PublicKeyFile)
 	// if err != nil {
 	// 	return nil, nil, err
 	// }
-	pubFile, err := os.OpenFile(Public_Key_File, os.O_RDONLY|os.O_CREATE, 0666)
+	pubFile, err := os.OpenFile(PublicKeyFile, os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -77,11 +84,11 @@ func GetKeyPair() (*rsa.PublicKey, *rsa.PrivateKey, error) {
 		return nil, nil, err
 	}
 
-	// privateBytes, err := os.ReadFile(Private_Key_File)
+	// privateBytes, err := os.ReadFile(PrivateKeyFile)
 	// if err != nil {
 	// 	return nil, nil, err
 	// }
-	privFile, err := os.OpenFile(Private_Key_File, os.O_RDONLY|os.O_CREATE, 0666)
+	privFile, err := os.OpenFile(PrivateKeyFile, os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
 		return nil, nil, err
 	}
