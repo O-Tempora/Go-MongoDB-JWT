@@ -1,0 +1,79 @@
+basePath: /
+definitions:
+  server.TokenPair:
+    properties:
+      access:
+        type: string
+      refresh:
+        type: string
+    type: object
+host: localhost:5005
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: This is a sample server Petstore server.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Swagger Example API
+  version: "1.0"
+paths:
+  /auth:
+    post:
+      consumes:
+      - application/json
+      description: Get Access and Refresh tokens by GUID
+      parameters:
+      - description: User's GUID
+        in: query
+        name: guid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.TokenPair'
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      summary: Performs user authorization via tokens
+      tags:
+      - Authentication
+  /refresh:
+    post:
+      consumes:
+      - application/json
+      description: Refresh tokens
+      parameters:
+      - description: Access and Refresh tokens
+        in: body
+        name: tokenPair
+        required: true
+        schema:
+          $ref: '#/definitions/server.TokenPair'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.TokenPair'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      summary: Refreshes Access and Refresh tokens
+      tags:
+      - Authentication
+swagger: "2.0"

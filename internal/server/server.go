@@ -50,7 +50,7 @@ func StartServer(config *Config) error {
 		}
 	}()
 
-	server := initServer()
+	server := initServer(config)
 	server.client = client
 
 	db := server.client.Database(config.Database, nil)
