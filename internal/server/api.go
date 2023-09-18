@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"gomongojwt/internal/middleware"
 	"gomongojwt/internal/service"
+	"gomongojwt/internal/util/resperr"
 	"io"
 	"net/http"
 	"os"
@@ -50,8 +51,8 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (s *server) respond(w http.ResponseWriter, r *http.Request, code int, data interface{}, err error) {
 	w.WriteHeader(code)
 	if err != nil {
-		response := map[string]string{"error": err.Error()}
-		json.NewEncoder(w).Encode(response)
+		// response := map[string]string{"error": err.Error()}
+		json.NewEncoder(w).Encode(err.Error())
 		s.logger.LogAttrs(context.Background(), slog.LevelError, "Response:",
 			slog.String("URL", r.URL.Path),
 			slog.String("Method", r.Method),
@@ -100,7 +101,7 @@ func (s *server) handleAuth(w http.ResponseWriter, r *http.Request) {
 	guid := r.URL.Query().Get("guid")
 	access, refresh, err := s.service.AuthorizeUser(guid)
 	if err != nil {
-		s.respond(w, r, http.StatusUnauthorized, nil, err)
+		s.respond(w, r, http.StatusUnauthorized, nil, resperr.ErrInvalidGUID)
 		return
 	}
 	s.respond(w, r, http.StatusOK, TokenPair{
@@ -124,12 +125,12 @@ func (s *server) handleRefresh(w http.ResponseWriter, r *http.Request) {
 	body := &TokenPair{}
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		s.respond(w, r, http.StatusBadRequest, nil, err)
+		s.respond(w, r, http.StatusBadRequest, nil, resperr.ErrInvalidRequestBody)
 		return
 	}
 	newAccess, newRefresh, err := s.service.RefreshTokens(body.Access, body.Refresh)
 	if err != nil {
-		s.respond(w, r, http.StatusUnauthorized, nil, err)
+		s.respond(w, r, http.StatusUnauthorized, nil, resperr.ErrInvalidToken)
 		return
 	}
 	s.respond(w, r, http.StatusOK, TokenPair{

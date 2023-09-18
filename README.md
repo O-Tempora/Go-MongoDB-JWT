@@ -22,3 +22,8 @@ db.users.find({})
 Copy user _id (without brackets and quotes)
 Put it as a query param named "guid" in access route
 ```
+
+To use swagger:
+```
+http://localhost:5005/swagger/
+```
