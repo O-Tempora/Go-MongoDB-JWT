@@ -31,4 +31,4 @@ git:
 	git commit -m "$m"
 	git push
 
-.DEFAULT_GOAL := 
+.DEFAULT_GOAL := build
